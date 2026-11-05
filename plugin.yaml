@@ -1,0 +1,8 @@
+name: belive-aihub
+kind: model-provider
+version: 0.1.0
+description: BeLive AI Hub inference provider for Hermes Agent
+author: BeLive Technology
+requires_hermes: ">=0.22.7"
+requires_env:
+  - BELIVE_TOKENHUB_API_KEY
