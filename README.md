@@ -7,7 +7,7 @@ Use [BeLive AI Hub](https://aihub.belive.sg/) as a named inference provider in H
 Install with Hermes's supported plugin installer:
 
 ```sh
-hermes plugins install https://github.com/belivetech/hermes-belive-aihub
+hermes plugins install https://github.com/belivetech/hermes-belive-aihub --enable
 ```
 
 Create a workspace inference key in BeLive AI Hub. Make it available as `BELIVE_TOKENHUB_API_KEY` through Hermes's supported secret configuration, such as the active profile's private `.env` file. Keep the key out of shell history, source control and logs. Do not use a console login or management key.
