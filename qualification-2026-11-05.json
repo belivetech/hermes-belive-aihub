@@ -1,0 +1,52 @@
+{
+  "date": "2026-11-05",
+  "environment": "staging",
+  "host_version": "0.22.7",
+  "host_commit": "b200f5bc60e31588ba2cb60e288029c4a54ba5fa",
+  "tested_provider_source": "bb9ee4e5c836f11fb9c33e032a18ee4748d080df",
+  "runtime": "Python 3.14.9",
+  "model": "qwen/qwen3.8-flash",
+  "approved_bounds": {
+    "usd": 5,
+    "inference_requests": 12,
+    "seconds": 600
+  },
+  "inference_requests": 3,
+  "elapsed_seconds": 4.58,
+  "customer_total_usd": "0.00069719",
+  "vision_qualified": false,
+  "supplier_invoice_reconciled": false,
+  "actual_agent_tool_round_trip": true,
+  "requests": [
+    {
+      "id": "req_4c8fjtdb74yabeetupt7q0qbtb",
+      "model": "qwen/qwen3.8-flash",
+      "streamed": false,
+      "tokens_prompt": 546,
+      "tokens_completion": 3,
+      "total_cost": 7.914e-05,
+      "cost_complete": true
+    },
+    {
+      "id": "req_ic5opgbb7beavhlifzybcx1l8i",
+      "model": "qwen/qwen3.8-flash",
+      "streamed": true,
+      "tokens_prompt": 3014,
+      "tokens_completion": 15,
+      "total_cost": 0.00043619,
+      "cost_complete": true
+    },
+    {
+      "id": "req_cpujb86u1f1ft57icokw04qi32",
+      "model": "qwen/qwen3.8-flash",
+      "streamed": true,
+      "tokens_prompt": 3065,
+      "tokens_completion": 13,
+      "total_cost": 0.00018186,
+      "cost_complete": true
+    }
+  ],
+  "ending_prepaid_balance_usd": "4.99930281",
+  "reserved_usd": "0.00000000",
+  "test_key_revoked": true
+}
