@@ -8,6 +8,7 @@ Recorded 2026-11-05. This package targets Hermes `v0.22.7`, source commit `b200f
 - `hermes plugins validate <repository> --install-deps --json`: **ok**, 15 checks passed, no warnings, security scan safe, no runtime overrides of core code.
 - Ruff against the pinned host's lint configuration: **all checks passed**.
 - Independent source/fixture review: no remaining blockers in the changed authentication, context-lookup and endpoint boundaries.
+- Fresh isolated-home install through `hermes plugins install file://<repository> --enable`: passed. A subsequent real host lookup discovered `belive-aihub` from the user-plugin layer using `chat_completions`.
 
 Tests cover protocol/tool eligibility, malformed/empty catalogs, bounded discovery errors, credential-redacted logging, redirect/origin refusal, missing keys, Tencent identity separation, live context lookup through Hermes's actual named-provider resolver, and actual host compression/vision client requests for two profile-scoped keys on production/staging endpoints. HTTP fixture transports prove request construction and routing; they do not prove a live model invocation.
 
