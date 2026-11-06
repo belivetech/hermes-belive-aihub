@@ -35,4 +35,15 @@ Staging qualification passed on 2026-11-05 using the installed GitHub source and
 
 The campaign used a separately prepaid organisation, enforcement enabled, no auto top-up, a model-restricted key with a USD 5 cap, and USD 5 daily/weekly/monthly guardrail limits. The reviewed runner enforced a persistent 12-request/600-second campaign limit, exact staging origin/key/model, a 1024-token reply cap, fixture-only tools and no redirects or discretionary paid retries. Offline real-agent and guard-regression proof passed first. Independent review found no remaining runner blockers; gateway credit/exposure/concurrency coverage passed 86 tests.
 
-Sanitized request records are in [qualification-2026-11-05.json](qualification-2026-11-05.json). Vision remains unqualified. No production inference was performed. Customer-charge matching does not establish supplier invoice reconciliation. [Catalog PR #149509](https://github.com/NousResearch/hermes-agent/pull/149509) is submitted and awaits maintainer review; catalog acceptance is not claimed.
+Sanitized request records are in [qualification-2026-11-05.json](qualification-2026-11-05.json). Vision remains unqualified. No production inference was performed. Customer-charge matching does not establish supplier invoice reconciliation. The catalog entry was accepted on 2026-11-05: maintainers landed it through [NousResearch/hermes-agent#149641](https://github.com/NousResearch/hermes-agent/pull/149641) (merge `3987a6bfc3`, which closed [#149509](https://github.com/NousResearch/hermes-agent/pull/149509)), as `plugin-catalog/belive-aihub.yaml`, tier `community`, pinned to `5d022b5a7190c673162965f4593b5a86f14e2c84`. A change to this repository reaches catalog installs only through a new reviewed SHA-bump PR.
+
+## Hermes v0.23.0 (2026-11-06)
+
+Re-checked against Hermes `v0.23.0` (`2bd378ed1b8d6bf2192cb26e0a55ff3091e6bd19`) in an isolated environment and home:
+
+- `scripts/run_tests.sh` on this repository's `tests/`: **12 passed, 0 failed**.
+- `hermes plugins validate <repository> --install-deps --json`: **ok**, 15 of 15 checks, no warnings.
+- `hermes plugins search belive` lists the entry, and `hermes plugins install belive-aihub --enable` installs it by catalog name at the pinned SHA `5d022b5` (`hermes plugins info`: version 0.1.0). The catalog is read live: the entry is not in the `v0.23.0` tag, which predates the merge.
+- The installed plugin registers `belive-aihub` (BeLive AI Hub, `chat_completions`, `BELIVE_TOKENHUB_API_KEY`); Hermes's own `tencent-tokenhub` still reads `TOKENHUB_API_KEY`.
+
+No inference was run for this re-check.
