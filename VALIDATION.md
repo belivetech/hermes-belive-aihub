@@ -81,7 +81,7 @@ Each failure that reached AI Hub now ends with `(AI Hub request <id>)`, from the
 
 ## Failure paths (0.2.2, 2026-11-07)
 
-`tests/test_media_failures.py` runs image generation, speech, transcription and video submit against 401 `invalid API key`, 402 `insufficient credit`, 429 with `Retry-After`, 502, 503 and a dropped connection. Every case names the status, the gateway's message and the request id, never the key, and sends the paid request once. A video refused with 401 or 402 leaves no job record; one that failed with 429 or 5xx keeps its record so a rerun reconciles it under the same Idempotency-Key. The new test found one fault, fixed in 0.2.2: video status polling ignored `Retry-After`; it now waits at least that long (capped at two minutes, and at the job deadline). Tests on Hermes v0.23.0: **94 passed, 0 failed**.
+`tests/test_media_failures.py` runs image generation, speech, transcription and video submit against 401 `invalid API key`, 402 `insufficient credit`, 429 with `Retry-After`, 502, 503 and a dropped connection. Every case names the status, the gateway's message and the request id, never the key, and sends the paid request once within the call. A video refused with 401 or 402 leaves no job record; one that failed with 429 or 5xx keeps its record so a rerun reconciles it under the same Idempotency-Key. The new test found one fault, fixed in 0.2.2: video status polling ignored `Retry-After`; it now waits at least that long (capped at two minutes, and at the job deadline). Tests on Hermes v0.23.0: **94 passed, 0 failed**.
 
 Staging, with an invalid key: image, speech, transcription and video each failed with `HTTP 401: invalid API key (AI Hub request req_…)`.
 
