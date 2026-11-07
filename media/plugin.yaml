@@ -1,0 +1,17 @@
+name: belive-aihub-media
+kind: backend
+version: 0.2.0
+description: BeLive AI Hub backends for Hermes image_generate, video_generate, text_to_speech and speech-to-text
+author: BeLive Technology
+license: MIT
+homepage: https://aihub.belive.sg/
+requires_hermes: ">=0.22.7"
+requires_env:
+  - name: BELIVE_TOKENHUB_API_KEY
+    description: BeLive AI Hub workspace inference key
+    secret: true
+    url: https://aihub.belive.sg/
+optional_env:
+  - name: BELIVE_TOKENHUB_BASE_URL
+    description: "Official staging base (https://api-stg-tokenhub.belive.sg/api/v1) for qualification; production is the default"
+    password: false

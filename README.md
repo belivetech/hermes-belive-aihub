@@ -36,6 +36,16 @@ Hermes owns context-length and other metadata lookup. The plugin's public `live_
 
 Use Hermes's existing `fallback_providers` settings to opt into fallback. This plugin does not enable fallback to another service, create keys, change account limits or alter other providers. Review old auxiliary/fallback overrides when migrating.
 
+## Media: images, video, speech and transcription
+
+Hermes loads model providers and media backends through different plugin mechanisms, so media is a second plugin in this repository, `belive-aihub-media`, installed separately:
+
+```sh
+hermes plugins install belivetech/hermes-belive-aihub#media --enable
+```
+
+It makes AI Hub the backend for `image_generate` (generation and edits), `video_generate` (resumable, idempotent jobs), `text_to_speech` (mp3, opus, aac, flac, wav, pcm) and speech-to-text, with models taken from the live AI Hub catalogues and the same `BELIVE_TOKENHUB_API_KEY`. Image and video understanding needs no media plugin: `vision_analyze` and `video_analyze` use the auxiliary vision configuration above with this provider. See [media/README.md](media/README.md) for configuration, behaviour and what Hermes has no plugin surface for.
+
 ## Migration and endpoints
 
 This provider is **BeLive AI Hub**, not Tencent TokenHub. It does not register the `tokenhub` alias or read `TOKENHUB_API_KEY`.
@@ -50,4 +60,4 @@ Use Hermes's supported plugin update/remove commands for `belive-aihub`. Catalog
 
 The plugin makes authenticated model-list requests and normal host-managed inference calls to BeLive. It reads only its declared key through the host's profile-aware API or a credential passed to discovery. It has no telemetry, self-updater, credential-file reader or background service.
 
-Behavioral tests use an isolated Hermes checkout at `v0.22.7`, the canonical host test runner and this repository's `tests/` directory. They exercise catalog filtering, failures/redirect refusal, host discovery, and real host compression/vision credential resolution across two profiles. See `VALIDATION.md` for recorded commands and scope before relying on a release claim.
+Behavioral tests use isolated Hermes checkouts at `v0.22.7` and `v0.23.0`, the canonical host test runner and this repository's `tests/` directory. They exercise catalog filtering, failures/redirect refusal, host discovery, real host compression/vision credential resolution across two profiles, and the media backends driven through Hermes's own tools. See `VALIDATION.md` for recorded commands and scope before relying on a release claim.
