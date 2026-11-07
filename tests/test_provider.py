@@ -186,3 +186,23 @@ def test_host_context_resolver_uses_live_catalog_for_named_provider(plugin, tmp_
             row["id"], base_url=plugin.BASE_URL, api_key="profile-key", provider="belive-aihub",
         ) == 1000000
     assert calls == [plugin.BASE_URL + "/models"]
+
+
+@pytest.mark.parametrize("reasoning, prefs, body", [
+    ({"enabled": True, "effort": "medium"}, {"order": ["bitdeer-ai"], "require_parameters": True},
+     {"reasoning": {"enabled": True, "effort": "medium"}, "provider": {"order": ["bitdeer-ai"], "require_parameters": True}}),
+    ({"enabled": False}, None, {"reasoning": {"enabled": False}}),
+    (None, None, {}),
+])
+def test_host_transport_sends_reasoning_and_provider_routing(plugin, reasoning, prefs, body):
+    # The host's own request builder, with Hermes's OpenRouter-only reasoning flag off as it is for this base URL.
+    from agent.transports.chat_completions import ChatCompletionsTransport
+    from providers import get_provider_profile
+
+    kwargs = ChatCompletionsTransport().build_kwargs(
+        "z-ai/glm-5.3-flash", [{"role": "user", "content": "Say OK"}], None,
+        provider_profile=get_provider_profile("belive-aihub"), base_url=plugin.BASE_URL,
+        reasoning_config=reasoning, provider_preferences=prefs, supports_reasoning=False)
+    sent = kwargs.get("extra_body") or {}
+    assert {k: sent[k] for k in ("reasoning", "provider") if k in sent} == body
+    assert "reasoning_effort" not in kwargs

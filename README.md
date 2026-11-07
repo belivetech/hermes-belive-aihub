@@ -34,6 +34,8 @@ The plugin discovers models from `https://tokenhub-api.belive.sg/api/v1/models` 
 
 Hermes owns context-length and other metadata lookup. The plugin's public `live_context_length` hook reads the same live catalog so a named provider receives the correct context window; it does not introduce a second metadata or pricing registry. Check the AI Hub Models page for current availability and prices, and Activity for actual usage and charges. Local estimates are not an invoice.
 
+`agent.reasoning_effort` is sent as AI Hub's `reasoning` object (`{"enabled": true, "effort": "medium"}`), and `provider_routing` (`order`, `only`, `ignore`, `sort`, `require_parameters`) as its `provider` object, from version 0.2.3; earlier versions sent neither. AI Hub refuses a `provider` field it does not serve, such as `data_collection`, with HTTP 400 instead of ignoring it.
+
 Use Hermes's existing `fallback_providers` settings to opt into fallback. This plugin does not enable fallback to another service, create keys, change account limits or alter other providers. Review old auxiliary/fallback overrides when migrating.
 
 ## Media: images, video, speech and transcription

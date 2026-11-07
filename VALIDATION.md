@@ -93,3 +93,16 @@ Chat streams are Hermes's own. Against a local fake endpoint on Hermes v0.23.0 (
 | Text, then the connection closes without `[DONE]` | 4 streaming | The partial text printed four times, exit 1 |
 
 `agent.api_max_retries: 0` did not change either count (12 and 4). Against AI Hub each of those requests is a separate, billed request. This is Hermes behaviour, outside this plugin; it is reported to the owner, not changed here.
+
+## Reasoning, provider routing and an interrupted video (0.2.3, 2026-11-07)
+
+**Reasoning and routing were not sent.** The provider profile kept Hermes's default `build_api_kwargs_extras` and `build_extra_body`, which return nothing, and Hermes's own reasoning gate only recognises OpenRouter hosts. A real `hermes chat -q --oneshot` (v0.23.0) against a local capture endpoint, with `agent.reasoning_effort: medium` and `provider_routing: {require_parameters: true, order: [bitdeer-ai, tencent-tokenhub]}`:
+
+| Plugin | Main chat request carried |
+| --- | --- |
+| 0.2.2 | no `reasoning`, no `provider` |
+| 0.2.3 | `reasoning: {enabled: true, effort: medium}` and `provider: {order: [bitdeer-ai, tencent-tokenhub], require_parameters: true}` |
+
+The same configuration against staging with `z-ai/glm-5.3-flash` answered `391`. `tests/test_provider.py` builds the request through Hermes's own `ChatCompletionsTransport` and fails on 0.2.2. Tests on Hermes v0.23.0: **97 passed, 0 failed**.
+
+**Interrupted video, live.** Through Hermes's own `video_generate` tool with `alibaba/wan3.0-video`, 2 s, 480p, on staging: the process was killed with `SIGKILL` while job `job_fvj5aabo572kcviqwkawsc69by` was polling. The saved record held the job id and Idempotency-Key. Running the same call again sent no submit, polled the same job 20 times, downloaded the MP4 and removed the record (102 s). One submit and one charge, USD 0.095 (`req_06fec725w1avw5hee7w9my9r45`).

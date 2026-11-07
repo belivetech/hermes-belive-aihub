@@ -119,6 +119,18 @@ class BeLiveAIHubProfile(ProviderProfile):
     def default_vision_model(self):
         return AUX_MODEL
 
+    def build_api_kwargs_extras(self, *, reasoning_config=None, **context):
+        # AI Hub reads OpenRouter's `reasoning` object on every chat route and maps it to each
+        # upstream's own control. Hermes's `supports_reasoning` flag only knows OpenRouter hosts, so
+        # it is not consulted: without this hook `agent.reasoning_effort` never left the host.
+        return ({"reasoning": dict(reasoning_config)} if isinstance(reasoning_config, dict) else {}), {}
+
+    def build_extra_body(self, *, session_id=None, **context):
+        # `provider_routing` is AI Hub's `provider` object. It is sent as configured: AI Hub
+        # refuses a field it does not serve (for example `data_collection`) instead of ignoring it.
+        prefs = context.get("provider_preferences")
+        return {"provider": dict(prefs)} if prefs else {}
+
 
 profile = BeLiveAIHubProfile(
     name="belive-aihub",
