@@ -36,6 +36,16 @@ Hermes owns context-length and other metadata lookup. The plugin's public `live_
 
 `agent.reasoning_effort` is sent as AI Hub's `reasoning` object (`{"enabled": true, "effort": "medium"}`), and `provider_routing` (`order`, `only`, `ignore`, `sort`, `require_parameters`) as its `provider` object, from version 0.2.3; earlier versions sent neither. AI Hub refuses a `provider` field it does not serve, such as `data_collection`, with HTTP 400 instead of ignoring it.
 
+**Broken streams can be resent.** Each chat request Hermes resends is a separate charge. Hermes v0.23.0 has more than one retry layer, and `agent.api_max_retries` caps only one of them. To keep a broken stream from being resent for minutes, also set the auto-recovery layer to zero:
+
+```yaml
+agent:
+  api_max_retries: 0
+  auto_recovery_cycles: 0   # default 5: waits 15 to 120 s and resends the whole request each cycle
+```
+
+With both at zero, a stream that ends in an error frame sends 2 requests (the stream and one non-streaming check). A stream that closes without `[DONE]` still sends 4: Hermes asks the model to continue three times, and no setting turns that off. A tool call cut off mid-arguments is not run. Measurements and the reproduction are in [VALIDATION.md](VALIDATION.md).
+
 Use Hermes's existing `fallback_providers` settings to opt into fallback. This plugin does not enable fallback to another service, create keys, change account limits or alter other providers. Review old auxiliary/fallback overrides when migrating.
 
 ## Media: images, video, speech and transcription
