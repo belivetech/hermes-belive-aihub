@@ -1,6 +1,6 @@
 name: belive-aihub
 kind: model-provider
-version: 0.2.2
+version: 0.2.3
 description: BeLive AI Hub inference provider for Hermes Agent
 author: BeLive Technology
 requires_hermes: ">=0.22.7"

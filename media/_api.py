@@ -18,7 +18,7 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 from agent.secret_scope import get_secret_str
 
-__version__ = "0.2.2"
+__version__ = "0.2.3"
 PLUGIN = "belive-aihub-media"
 PROVIDER = "belive-aihub"
 KEY_ENV = "BELIVE_TOKENHUB_API_KEY"
