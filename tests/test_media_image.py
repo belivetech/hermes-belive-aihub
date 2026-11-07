@@ -29,7 +29,7 @@ def serve(gateway, *rows):
 
 def generated(png=PNG, **extra):
     return Response(200, {"data": [{"b64_json": base64.b64encode(png).decode(), **extra}]},
-                    {"x-request-id": "req_image_1"})
+                    {"x-generation-id": "gen_image_1"})
 
 
 def provider(media):
@@ -41,7 +41,7 @@ def test_generation_request_and_cached_result(media, gateway):
     gateway.on("POST", "/images/generations", generated(revised_prompt="a red apple"))
     result = provider(media).generate("A red apple", "landscape", model="lab/paint")
     assert result["success"] and result["provider"] == "belive-aihub" and result["modality"] == "text"
-    assert result["size"] == "1360x768" and result["request_id"] == "req_image_1"
+    assert result["size"] == "1360x768" and result["generation_id"] == "gen_image_1"
     assert result["revised_prompt"] == "a red apple"
     assert open(result["image"], "rb").read() == PNG and result["image"].endswith(".png")
     call = gateway.calls("POST", "/images/generations")[0]

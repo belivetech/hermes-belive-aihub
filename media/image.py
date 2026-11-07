@@ -163,7 +163,7 @@ class BeLiveImageGenProvider(ImageGenProvider):
             return fail("BeLive AI Hub returned no usable PNG, JPEG or WebP data; the request may have been "
                         "charged, so check Activity before retrying", "empty_response")
         path = save_b64_image(first["b64_json"], prefix=self.name, extension=_EXTENSIONS[mime])
-        extra: dict[str, Any] = {"size": size, "request_id": _api.request_id(headers)}
+        extra: dict[str, Any] = {"size": size, "generation_id": _api.generation_id(headers)}
         if isinstance(first.get("revised_prompt"), str):
             extra["revised_prompt"] = first["revised_prompt"]
         return success_response(image=str(path), model=model_id, prompt=prompt, aspect_ratio=aspect,

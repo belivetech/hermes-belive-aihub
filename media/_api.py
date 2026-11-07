@@ -223,6 +223,7 @@ def input_modalities(row: dict) -> list[str]:
     return str_list(architecture.get("input_modalities") if isinstance(architecture, dict) else None)
 
 
-def request_id(headers: Any) -> str | None:
-    value = headers.get("x-request-id") if headers is not None else None
+def generation_id(headers: Any) -> str | None:
+    """The gateway's id for this request, as shown in Activity (``x-generation-id``)."""
+    value = headers.get("x-generation-id") if headers is not None else None
     return value if isinstance(value, str) and value else None
