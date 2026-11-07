@@ -314,6 +314,7 @@ class BeLiveVideoGenProvider(VideoGenProvider):
                 "Run the same request again to resume it; no second job is created")
         failures = 0
         while True:
+            pause = POLL_INTERVAL
             try:
                 _, _, job = _api.send_json("GET", f"/videos/{quote(job_id, safe='')}", key=key,
                                            timeout=REQUEST_TIMEOUT, label="video status")
@@ -327,6 +328,7 @@ class BeLiveVideoGenProvider(VideoGenProvider):
                 transient = exc.status is None or exc.status == 429 or exc.status >= 500
                 if not transient or failures >= MAX_POLL_FAILURES:
                     raise BeLiveError(f"{exc}. {hint}") from None
+                pause = max(pause, exc.retry_after or 0.0)
                 job = {}
             status = job.get("status") if isinstance(job, dict) else None
             if status == "completed":
@@ -342,7 +344,7 @@ class BeLiveVideoGenProvider(VideoGenProvider):
             if time.monotonic() >= deadline:
                 raise BeLiveError(f"BeLive AI Hub video job {job_id} was still running after "
                                   f"{int(POLL_DEADLINE // 60)} minutes. {hint}")
-            _sleep(POLL_INTERVAL)
+            _sleep(min(pause, max(0.0, deadline - time.monotonic())))
 
     def _download(self, key: str, job_id: str) -> Path:
         url = f"{_api.base_url()}/videos/{quote(job_id, safe='')}/content?index=0"
