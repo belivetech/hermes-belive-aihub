@@ -153,3 +153,19 @@ def test_missing_key_fails_before_any_request(media, gateway, monkeypatch):
     assert not gen.is_available()
     result = gen.generate("x", model="lab/paint")
     assert "BELIVE_TOKENHUB_API_KEY" in result["error"] and not gateway.requests
+
+
+def test_failures_name_the_ai_hub_request(media, gateway):
+    serve(gateway, image_row())
+    gateway.on("POST", "/images/generations",
+               Response(402, {"error": {"message": "insufficient credit"}}, {"x-generation-id": "req_refused_1"}))
+    assert provider(media).generate("x", model="lab/paint")["error"] == (
+        "BeLive AI Hub image generation returned HTTP 402: insufficient credit (AI Hub request req_refused_1)")
+    gateway.routes = [r for r in gateway.routes if r[1] != "/images/generations"]
+    gateway.on("POST", "/images/generations", generated(b"GIF89a....."))
+    assert provider(media).generate("x", model="lab/paint")["error"].endswith(
+        "check Activity before retrying (AI Hub request gen_image_1)")
+    # A header that is not a plain id is not repeated into the message.
+    gateway.routes = [r for r in gateway.routes if r[1] != "/images/generations"]
+    gateway.on("POST", "/images/generations", Response(400, {"error": {"message": "busy"}}, {"x-generation-id": "a b<c>"}))
+    assert provider(media).generate("x", model="lab/paint")["error"].endswith("HTTP 400: busy")

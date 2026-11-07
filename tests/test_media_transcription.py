@@ -75,3 +75,14 @@ def test_failures_return_the_error_envelope_and_never_raise(stt, gateway, tmp_pa
     gateway.on("POST", "/audio/transcriptions", Response(200, {"id": "job_9", "status": "failed",
                                                               "error": {"message": "bad audio"}}))
     assert stt.transcribe(recording(tmp_path), model="lab/ear")["error"].endswith("did not complete: bad audio")
+
+
+def test_the_upload_request_id_is_returned_and_named_in_failures(stt, gateway, tmp_path):
+    gateway.on("POST", "/audio/transcriptions", Response(200, {"text": "ok"}, {"x-generation-id": "req_stt_1"}))
+    assert stt.transcribe(recording(tmp_path), model="lab/ear")["generation_id"] == "req_stt_1"
+    gateway.routes = [r for r in gateway.routes if r[1] != "/audio/transcriptions"]
+    gateway.on("POST", "/audio/transcriptions", Response(200, {"id": "job_9", "status": "failed",
+                                                              "error": {"message": "bad audio"}}, {"x-generation-id": "req_stt_2"}))
+    result = stt.transcribe(recording(tmp_path), model="lab/ear")
+    assert result["error"] == "BeLive AI Hub transcription did not complete: bad audio (AI Hub request req_stt_2)"
+    assert result["generation_id"] == "req_stt_2"

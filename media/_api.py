@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import threading
 import time
 import uuid
@@ -17,7 +18,7 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 from agent.secret_scope import get_secret_str
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 PLUGIN = "belive-aihub-media"
 PROVIDER = "belive-aihub"
 KEY_ENV = "BELIVE_TOKENHUB_API_KEY"
@@ -30,14 +31,21 @@ _MAX_JSON_BYTES = 8 * 1024 * 1024
 _MAX_ERROR_BYTES = 16 * 1024
 _CATALOGUE_TTL = 300.0
 _FAILURE_TTL = 60.0
+_REQUEST_ID = re.compile(r"[A-Za-z0-9_-]{1,64}")
 
 
 class BeLiveError(Exception):
     """A failure whose message is safe to show: no key, URL, header or request body."""
 
-    def __init__(self, message: str, status: int | None = None):
+    def __init__(self, message: str, status: int | None = None, request_id: str | None = None):
         super().__init__(message)
         self.status = status
+        self.request_id = request_id
+
+
+def with_request_id(message: str, request_id: str | None) -> str:
+    """Appends the gateway's request id, so support can trace a failure to its record."""
+    return f"{message} (AI Hub request {request_id})" if request_id else message
 
 
 class _NoRedirect(HTTPRedirectHandler):
@@ -109,9 +117,10 @@ def send(
             detail = _detail(exc.read(_MAX_ERROR_BYTES))
         except Exception:
             detail = ""
-        raise BeLiveError(
-            f"BeLive AI Hub {label} returned HTTP {exc.code}" + (f": {detail}" if detail else ""),
-            exc.code) from None
+        request_id = generation_id(exc.headers)
+        raise BeLiveError(with_request_id(
+            f"BeLive AI Hub {label} returned HTTP {exc.code}" + (f": {detail}" if detail else ""), request_id),
+            exc.code, request_id) from None
     except TimeoutError:
         raise BeLiveError(f"BeLive AI Hub {label} timed out after {int(timeout)} s") from None
     except (URLError, OSError):
@@ -134,7 +143,9 @@ def send_json(
     try:
         return status, response_headers, json.loads(data)
     except ValueError:
-        raise BeLiveError(f"BeLive AI Hub {label} returned a response that is not JSON") from None
+        request_id = generation_id(response_headers)
+        raise BeLiveError(with_request_id(f"BeLive AI Hub {label} returned a response that is not JSON", request_id),
+                          status, request_id) from None
 
 
 def multipart(fields: dict[str, str], files: list[tuple[str, str, str, bytes]]) -> tuple[bytes, str]:
@@ -224,6 +235,6 @@ def input_modalities(row: dict) -> list[str]:
 
 
 def generation_id(headers: Any) -> str | None:
-    """The gateway's id for this request, as shown in Activity (``x-generation-id``)."""
+    """The gateway's id for this request, as shown in Activity and read by ``GET /generation?id=``."""
     value = headers.get("x-generation-id") if headers is not None else None
-    return value if isinstance(value, str) and value else None
+    return value.strip() if isinstance(value, str) and _REQUEST_ID.fullmatch(value.strip()) else None

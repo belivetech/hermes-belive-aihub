@@ -71,3 +71,10 @@ Recorded charges total **USD 0.14508** over 11 paid requests, each with `cost_co
 **Not exercised live:** reference-image video input, first-frame video input, an interrupted-and-resumed video job and a long (job-answered) transcription, all of which are covered by fixtures only; a storage-link video download (the gateway served the bytes directly); production; Hermes Desktop pickers.
 
 **Catalog.** The accepted entry `belive-aihub` pins `5d022b5` (provider only). Reaching catalog installs needs a reviewed SHA bump for it and a new `belive-aihub-media` entry with `subdir: media`; neither is opened.
+
+## Request ids in results and failures (0.2.1, 2026-11-07)
+
+Each failure that reached AI Hub now ends with `(AI Hub request <id>)`, from the gateway's `X-Generation-Id` header; a header that is not a plain id is ignored. Transcriptions also return the upload's id as `generation_id`, like image results and video jobs already did. A transcription job that fails is named by the upload's id.
+
+- Tests on Hermes v0.23.0: **68 passed, 0 failed** (`scripts/run_tests.sh`, as in Reproduce).
+- Staging, 2026-11-07, the backends called directly with only the staging key: a transcription of the WAV clip with `qwen/qwen-audio-3.0-asr-flash` returned `generation_id` `req_rgbz018jwtwrfv7o5f43rltnbp`, and `GET /generation?id=` on it returned the model, `alibaba-model-studio` and USD 0.000245. A speech request with an unknown voice failed with the gateway's voice list and `(AI Hub request req_35fu3m40riygvhu7oevi31mv1s)`; that refusal is uncharged and `GET /generation` answers 404 for it.

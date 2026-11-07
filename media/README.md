@@ -48,6 +48,7 @@ Image and video understanding is not part of this plugin. `vision_analyze` and `
 - **Speech** takes 1 to 600 characters per request; `speed` is ignored because AI Hub has no speed control. `ogg` is sent as `opus` (the gateway returns Ogg Opus; it has no `ogg` format). Voices belong to a model and are case-sensitive; a wrong voice is refused with the model's list.
 - **Transcription** takes MP3 or WAV recordings up to 25 MB (mono). Convert other formats first, for example `ffmpeg -i voice.ogg -ac 1 voice.wav`. A long recording that AI Hub answers with a job is polled for up to five minutes.
 - **Charges.** Each call is billed to the workspace on its AI Hub key with no Hermes approval prompt. Check Activity for actual usage and charges; the generation id each image result and video job reports is the id shown there.
+- **Request ids for support.** Image results, video jobs and transcriptions report the AI Hub request id as `generation_id`, and every failure that reached AI Hub ends with `(AI Hub request <id>)`. Look a completed request up with `GET /generation?id=<id>` (model, provider, cost); a request AI Hub refused before running it is not charged and is not listed there, so quote its id to BeLive support.
 
 ## Not provided
 

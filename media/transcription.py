@@ -61,8 +61,12 @@ class BeLiveTranscriptionProvider(TranscriptionProvider):
 
     def transcribe(self, file_path: str, *, model: Optional[str] = None, language: Optional[str] = None,
                    **extra: Any) -> dict[str, Any]:
+        request_id: str | None = None
+
         def result(ok: bool, text: str = "", error: str = "") -> dict[str, Any]:
             out = {"success": ok, "transcript": text, "provider": self.name}
+            if request_id:
+                out["generation_id"] = request_id
             if not ok:
                 out["error"] = error
             return out
@@ -82,12 +86,13 @@ class BeLiveTranscriptionProvider(TranscriptionProvider):
             fields = {"model": model_id}
             if language and language.strip():
                 fields["language"] = language.strip().split("-")[0].split("_")[0].lower()
-            _, _, payload = _api.send_json(
+            _, headers, payload = _api.send_json(
                 "POST", "/audio/transcriptions", key=key, timeout=REQUEST_TIMEOUT, label="transcription",
                 form=_api.multipart(fields, [("file", f"recording{path.suffix.lower() or '.wav'}", mime, data)]))
+            request_id = _api.generation_id(headers)
             text = self._text(key, payload)
         except BeLiveError as exc:
-            return result(False, error=str(exc))
+            return result(False, error=_api.with_request_id(str(exc), request_id if exc.request_id is None else None))
         except OSError:
             return result(False, error="The recording could not be read")
         return result(True, text)

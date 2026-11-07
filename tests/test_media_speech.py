@@ -50,8 +50,8 @@ def test_long_text_unlisted_model_and_wrong_audio_are_refused(speech, gateway, t
     with pytest.raises(media._api.BeLiveError, match="lists no speech model named 'lab/song'"):
         speech.synthesize("Hi", str(tmp_path / "a.mp3"), model="lab/song")
     assert not gateway.calls("POST", "")
-    gateway.on("POST", "/audio/speech", Response(200, b"<html>"))
-    with pytest.raises(media._api.BeLiveError, match="may have been charged"):
+    gateway.on("POST", "/audio/speech", Response(200, b"<html>", {"x-generation-id": "req_speech_1"}))
+    with pytest.raises(media._api.BeLiveError, match=r"may have been charged.*\(AI Hub request req_speech_1\)$"):
         speech.synthesize("Hi", str(tmp_path / "a.mp3"), format="wav")
     assert not list(tmp_path.glob("*.wav"))
 

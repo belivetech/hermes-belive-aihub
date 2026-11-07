@@ -80,12 +80,13 @@ class BeLiveTTSProvider(TTSProvider):
         _api.find_model(_api.catalogue(_PATH, _ROUTE), model_id, "speech")
         body = {"model": model_id, "input": text, "voice": (voice or "").strip() or DEFAULT_VOICE,
                 "response_format": wire}
-        _, _, audio = _api.send(
+        _, headers, audio = _api.send(
             "POST", _api.base_url() + "/audio/speech", key=key, body=json.dumps(body).encode(), content_type="application/json",
             accept="audio/*", timeout=REQUEST_TIMEOUT, max_bytes=MAX_AUDIO_BYTES, label="speech synthesis")
         if not _MAGIC[wire](audio):
-            raise BeLiveError(f"BeLive AI Hub speech synthesis did not return {wire} audio; the request may have "
-                              "been charged, so check Activity before retrying")
+            raise BeLiveError(_api.with_request_id(
+                f"BeLive AI Hub speech synthesis did not return {wire} audio; the request may have "
+                "been charged, so check Activity before retrying", _api.generation_id(headers)))
         target = Path(output_path).with_suffix(extension)
         target.write_bytes(audio)
         return str(target)

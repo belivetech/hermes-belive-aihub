@@ -160,8 +160,9 @@ class BeLiveImageGenProvider(ImageGenProvider):
         raw = _decode(first.get("b64_json"))
         mime = sniff_image(raw) if raw else None
         if not mime or len(raw) > MAX_IMAGE_BYTES:
-            return fail("BeLive AI Hub returned no usable PNG, JPEG or WebP data; the request may have been "
-                        "charged, so check Activity before retrying", "empty_response")
+            return fail(_api.with_request_id(
+                "BeLive AI Hub returned no usable PNG, JPEG or WebP data; the request may have been "
+                "charged, so check Activity before retrying", _api.generation_id(headers)), "empty_response")
         path = save_b64_image(first["b64_json"], prefix=self.name, extension=_EXTENSIONS[mime])
         extra: dict[str, Any] = {"size": size, "generation_id": _api.generation_id(headers)}
         if isinstance(first.get("revised_prompt"), str):
