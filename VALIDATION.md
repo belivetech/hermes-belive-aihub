@@ -78,3 +78,18 @@ Each failure that reached AI Hub now ends with `(AI Hub request <id>)`, from the
 
 - Tests on Hermes v0.23.0: **68 passed, 0 failed** (`scripts/run_tests.sh`, as in Reproduce).
 - Staging, 2026-11-07, the backends called directly with only the staging key: a transcription of the WAV clip with `qwen/qwen-audio-3.0-asr-flash` returned `generation_id` `req_rgbz018jwtwrfv7o5f43rltnbp`, and `GET /generation?id=` on it returned the model, `alibaba-model-studio` and USD 0.000245. A speech request with an unknown voice failed with the gateway's voice list and `(AI Hub request req_35fu3m40riygvhu7oevi31mv1s)`; that refusal is uncharged and `GET /generation` answers 404 for it.
+
+## Failure paths (0.2.2, 2026-11-07)
+
+`tests/test_media_failures.py` runs image generation, speech, transcription and video submit against 401 `invalid API key`, 402 `insufficient credit`, 429 with `Retry-After`, 502, 503 and a dropped connection. Every case names the status, the gateway's message and the request id, never the key, and sends the paid request once. A video refused with 401 or 402 leaves no job record; one that failed with 429 or 5xx keeps its record so a rerun reconciles it under the same Idempotency-Key. The new test found one fault, fixed in 0.2.2: video status polling ignored `Retry-After`; it now waits at least that long (capped at two minutes, and at the job deadline). Tests on Hermes v0.23.0: **94 passed, 0 failed**.
+
+Staging, with an invalid key: image, speech, transcription and video each failed with `HTTP 401: invalid API key (AI Hub request req_…)`.
+
+Chat streams are Hermes's own. Against a local fake endpoint on Hermes v0.23.0 (`custom` provider, `chat_completions` transport), `hermes chat -q --oneshot -Q`:
+
+| Stream behaviour | Chat requests | Result |
+| --- | --- | --- |
+| Text, then a top-level `error` frame | 12 streaming and 3 non-streaming in 150 s, still retrying when stopped | No answer |
+| Text, then the connection closes without `[DONE]` | 4 streaming | The partial text printed four times, exit 1 |
+
+`agent.api_max_retries: 0` did not change either count (12 and 4). Against AI Hub each of those requests is a separate, billed request. This is Hermes behaviour, outside this plugin; it is reported to the owner, not changed here.

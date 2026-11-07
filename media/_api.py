@@ -18,7 +18,7 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 from agent.secret_scope import get_secret_str
 
-__version__ = "0.2.1"
+__version__ = "0.2.2"
 PLUGIN = "belive-aihub-media"
 PROVIDER = "belive-aihub"
 KEY_ENV = "BELIVE_TOKENHUB_API_KEY"
@@ -37,10 +37,21 @@ _REQUEST_ID = re.compile(r"[A-Za-z0-9_-]{1,64}")
 class BeLiveError(Exception):
     """A failure whose message is safe to show: no key, URL, header or request body."""
 
-    def __init__(self, message: str, status: int | None = None, request_id: str | None = None):
+    def __init__(self, message: str, status: int | None = None, request_id: str | None = None,
+                 retry_after: float | None = None):
         super().__init__(message)
         self.status = status
         self.request_id = request_id
+        self.retry_after = retry_after
+
+
+def _retry_after(headers: Any) -> float | None:
+    """``Retry-After`` in seconds, capped at two minutes; the date form is not used by AI Hub."""
+    try:
+        seconds = float(headers.get("retry-after")) if headers is not None else 0.0
+    except (TypeError, ValueError):
+        return None
+    return min(seconds, 120.0) if seconds > 0 else None
 
 
 def with_request_id(message: str, request_id: str | None) -> str:
@@ -120,7 +131,7 @@ def send(
         request_id = generation_id(exc.headers)
         raise BeLiveError(with_request_id(
             f"BeLive AI Hub {label} returned HTTP {exc.code}" + (f": {detail}" if detail else ""), request_id),
-            exc.code, request_id) from None
+            exc.code, request_id, _retry_after(exc.headers)) from None
     except TimeoutError:
         raise BeLiveError(f"BeLive AI Hub {label} timed out after {int(timeout)} s") from None
     except (URLError, OSError):

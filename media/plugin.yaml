@@ -1,6 +1,6 @@
 name: belive-aihub-media
 kind: backend
-version: 0.2.1
+version: 0.2.2
 description: BeLive AI Hub backends for Hermes image_generate, video_generate, text_to_speech and speech-to-text
 author: BeLive Technology
 license: MIT
