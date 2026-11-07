@@ -77,7 +77,7 @@ Recorded charges total **USD 0.14508** over 11 paid requests, each with `cost_co
 Each failure that reached AI Hub now ends with `(AI Hub request <id>)`, from the gateway's `X-Generation-Id` header; a header that is not a plain id is ignored. Transcriptions also return the upload's id as `generation_id`, like image results and video jobs already did. A transcription job that fails is named by the upload's id.
 
 - Tests on Hermes v0.23.0: **68 passed, 0 failed** (`scripts/run_tests.sh`, as in Reproduce).
-- Staging, 2026-11-07, the backends called directly with only the staging key: a transcription of the WAV clip with `qwen/qwen-audio-3.0-asr-flash` returned `generation_id` `req_rgbz018jwtwrfv7o5f43rltnbp`, and `GET /generation?id=` on it returned the model, `alibaba-model-studio` and USD 0.000245. A speech request with an unknown voice failed with the gateway's voice list and `(AI Hub request req_35fu3m40riygvhu7oevi31mv1s)`; that refusal is uncharged and `GET /generation` answers 404 for it.
+- Staging, 2026-11-07, the backends called directly with only the staging key: a transcription of the WAV clip with `qwen/qwen-audio-3.0-asr-flash` returned `generation_id` `req_rgbz018jwtwrfv7o5f43rltnbp`, and `GET /generation?id=` on it returned the model, `alibaba-model-studio` and USD 0.000245. A speech request with an unknown voice failed with the gateway's voice list and `(AI Hub request req_35fu3m40riygvhu7oevi31mv1s)`; that refusal happened before inference and `GET /generation` answers 404 for it; no charge was checked against billing records.
 
 ## Failure paths (0.2.2, 2026-11-07)
 
@@ -109,7 +109,7 @@ The same configuration against staging with `z-ai/glm-5.3-flash` answered `391`.
 
 ## Chat requests resent after a broken stream (unresolved, 2026-11-07)
 
-**Status: unresolved.** This is Hermes host behaviour; the plugin cannot change it. The README now gives the configuration that limits it. Reporting it upstream waits for the owner's decision.
+**Status: unresolved.** This is Hermes host behaviour; the plugin cannot change it. The README now gives a configuration that partly mitigates it; it does not give a no-retry guarantee. Reporting it upstream waits for the owner's decision.
 
 `repro/stream_retries.sh` runs `hermes chat -q --oneshot -Q` (Hermes v0.23.0, `custom` provider, `chat_completions`) against `repro/fake_stream.py` on 127.0.0.1 with a fake key, and counts the main-turn chat requests (the requests that carry the tool list):
 
@@ -119,6 +119,7 @@ The same configuration against staging with `z-ai/glm-5.3-flash` answered `391`.
 | Text, then an `error` frame, no `[DONE]` | 3 streaming and 1 non-streaming in the first 120 s, then more after waits of up to 120 s (5 cycles) | **2** (1 streaming, 1 non-streaming) | "returned a server error", exit 1 |
 | Text, then the connection closes without `[DONE]` | 4 | **4**, each with the conversation so far plus a "continue" message | The partial text joined four times with no "incomplete" label, exit 1 |
 | Half a tool call, then close | 4 | **4**, the same request each time | The tool is **not** run. The message wrongly blames the reasoning budget. Exit 1 |
+| A complete `terminal` tool call, then, after the tool result, text and a close without `[DONE]` (2026-11-08) | not run | **5**: the tool call, then 4 for the broken answer, each carrying the one tool result | The tool ran **once**; the partial text is joined four times. Exit 1 |
 
 The fixture differs from the earlier one (0.2.2 section), so the absolute counts differ. The layers below explain both runs.
 
@@ -134,5 +135,20 @@ Retry layers in Hermes v0.23.0:
 
 The `hermes chat --oneshot` daemon keeps retrying after the CLI that started it is killed. `hermes gateway stop` without `--yes` refuses to stop a gateway that has a live session.
 
-The acceptance asked for one request per failure with retries off. That is met only for the healthy case. With both settings at zero, an error frame sends 2 requests and an EOF sends 4. Both need a Hermes change: a setting for the continuation layer, and an "incomplete" label on stitched partial text. Run `repro/stream_retries.sh` with `HERMES_BIN` set; it exits non-zero when any count changes.
+The script has two checks (2026-11-08):
+
+- `repro/stream_retries.sh characterize` compares with the counts above. It passes on Hermes v0.23.0. That shows the reproduction is stable, **not** that the retries are correct.
+- `repro/stream_retries.sh acceptance` compares with the required behaviour: with `api_max_retries: 0` and `auto_recovery_cycles: 0`, one request per failure, and a completed tool run exactly once. On Hermes v0.23.0 it **fails**:
+
+| Case | Required | Hermes v0.23.0 | Result |
+| --- | --- | --- | --- |
+| Healthy | 1 request | 1 | Pass |
+| Error frame | 1 request | 2 | Fail |
+| EOF without `[DONE]` | 1 request | 4 | Fail |
+| Half a tool call | 1 request, tool not run | 4, not run | Fail on requests |
+| Completed tool, then a broken stream | 2 requests, tool run once | 5, run once | Fail on requests; the tool-run criterion **passes** in this fixture |
+
+The tool-run result covers one fixture: a tool that completed before the stream broke, with no auto-recovery. A completed tool followed by an error frame with auto-recovery on is not covered.
+
+`auto_recovery_cycles: 0` is a **partial mitigation**. It stops the minutes-long resend loop, but an error frame still sends 2 requests and an EOF 4. Closing this needs a Hermes change: a setting for the continuation layer, and an "incomplete" label on joined partial text.
 
