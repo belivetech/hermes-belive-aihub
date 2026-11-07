@@ -106,3 +106,33 @@ Chat streams are Hermes's own. Against a local fake endpoint on Hermes v0.23.0 (
 The same configuration against staging with `z-ai/glm-5.3-flash` answered `391`. `tests/test_provider.py` builds the request through Hermes's own `ChatCompletionsTransport` and fails on 0.2.2. Tests on Hermes v0.23.0: **97 passed, 0 failed**.
 
 **Interrupted video, live.** Through Hermes's own `video_generate` tool with `alibaba/wan3.0-video`, 2 s, 480p, on staging: the process was killed with `SIGKILL` while job `job_fvj5aabo572kcviqwkawsc69by` was polling. The saved record held the job id and Idempotency-Key. Running the same call again sent no submit, polled the same job 20 times, downloaded the MP4 and removed the record (102 s). One submit and one charge, USD 0.095 (`req_06fec725w1avw5hee7w9my9r45`).
+
+## Chat requests resent after a broken stream (unresolved, 2026-11-07)
+
+**Status: unresolved.** This is Hermes host behaviour; the plugin cannot change it. The README now gives the configuration that limits it. Reporting it upstream waits for the owner's decision.
+
+`repro/stream_retries.sh` runs `hermes chat -q --oneshot -Q` (Hermes v0.23.0, `custom` provider, `chat_completions`) against `repro/fake_stream.py` on 127.0.0.1 with a fake key, and counts the main-turn chat requests (the requests that carry the tool list):
+
+| Stream behaviour | Default config (`api_max_retries: 0`, `auto_recovery_cycles: 5`) | `api_max_retries: 0`, `auto_recovery_cycles: 0` | What the user sees |
+| --- | --- | --- | --- |
+| Healthy (control) | 1 | 1 | The answer |
+| Text, then an `error` frame, no `[DONE]` | 3 streaming and 1 non-streaming in the first 120 s, then more after waits of up to 120 s (5 cycles) | **2** (1 streaming, 1 non-streaming) | "returned a server error", exit 1 |
+| Text, then the connection closes without `[DONE]` | 4 | **4**, each with the conversation so far plus a "continue" message | The partial text joined four times with no "incomplete" label, exit 1 |
+| Half a tool call, then close | 4 | **4**, the same request each time | The tool is **not** run. The message wrongly blames the reasoning budget. Exit 1 |
+
+The fixture differs from the earlier one (0.2.2 section), so the absolute counts differ. The layers below explain both runs.
+
+Retry layers in Hermes v0.23.0:
+
+| Layer | Source | Setting | What triggers it |
+| --- | --- | --- | --- |
+| Stream reconnect | `agent/chat_completion_helpers.py` `_call` | `HERMES_STREAM_RETRIES` (env, default 2) | Network errors and empty streams before any output, and drops mid tool call. Not reached by the cases above: setting it to 0 changed no count. |
+| Non-streaming check | `_unmask_server_error_with_nonstreaming` | None (once per 60 s) | A server error that ends a stream before delivery |
+| API retry | `agent/conversation_loop.py` | `agent.api_max_retries` (default 3) | Each failed call. The log shows "attempt 1/1" at 0, so the setting is honoured |
+| Auto-recovery | `agent/turn_recovery_autorecover.py` | `agent.auto_recovery_cycles` (default 5) | A transient failure after the API retries and fallbacks are spent. Each cycle resends the request. |
+| Continuation | `agent/turn_truncation.py` `_continue_text` | None (4 attempts) | A stream with no `finish_reason`, including a clean EOF and a dropped tool call |
+
+The `hermes chat --oneshot` daemon keeps retrying after the CLI that started it is killed. `hermes gateway stop` without `--yes` refuses to stop a gateway that has a live session.
+
+The acceptance asked for one request per failure with retries off. That is met only for the healthy case. With both settings at zero, an error frame sends 2 requests and an EOF sends 4. Both need a Hermes change: a setting for the continuation layer, and an "incomplete" label on stitched partial text. Run `repro/stream_retries.sh` with `HERMES_BIN` set; it exits non-zero when any count changes.
+
