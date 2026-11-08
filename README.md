@@ -28,6 +28,49 @@ auxiliary:
 
 Auxiliary requests resolve the same active profile's key. Do not add `api_key` overrides to auxiliary blocks. Restart any background gateway after changing secrets.
 
+## Without the plugin
+
+Hermes older than 0.22.7, or a host where you do not want a plugin, can call BeLive AI Hub as a custom OpenAI-compatible provider. Hermes reads this shape from 0.18.0 through 0.23.0. It was run against production on Hermes 0.22.5 on 2026-11-09 (`qwen/qwen3.8-flash` main, `google/gemini-3.8-flash` with `-m`).
+
+Put the key in the profile's private `.env` as `BELIVE_TOKENHUB_API_KEY=sk-tokenhub-…`. Do not use `TOKENHUB_API_KEY`: Hermes's Tencent provider reads that name. Then merge into `config.yaml`:
+
+```yaml
+providers:
+  belive:                      # not "belive-aihub", which is the plugin's provider name
+    base_url: https://tokenhub-api.belive.sg/api/v1
+    key_env: BELIVE_TOKENHUB_API_KEY
+    transport: chat_completions
+    default_model: qwen/qwen3.8-flash
+model:
+  provider: custom:belive
+  default: qwen/qwen3.8-flash
+fallback_providers:
+  - provider: custom
+    model: z-ai/glm-5.3-flash
+    base_url: https://tokenhub-api.belive.sg/api/v1
+    key_env: BELIVE_TOKENHUB_API_KEY
+auxiliary:
+  vision:      { provider: main, model: google/gemini-3.8-flash }
+  compression: { provider: main, model: qwen/qwen3.8-flash }
+agent:
+  reasoning_effort: low
+```
+
+`base_url` is needed on the named provider and on each `fallback_providers` entry. Auxiliary blocks use `provider: main`, which reuses the main provider's address and key. `agent.reasoning_effort` is sent as a top-level `reasoning_effort` from Hermes 0.19.0; from 0.21.4 Hermes sends `medium` when it is unset.
+
+What you do not get without the plugin:
+
+| Feature | Plugin | Custom provider |
+|---|---|---|
+| Chat, tools, fallback, vision, compression | Yes | Yes |
+| Model list | Ready chat-with-tools models from the live catalogue | Every catalogue entry, media models included |
+| `provider_routing` sent as AI Hub's `provider` object | Yes | No |
+| Discovery address guard | Production and staging AI Hub only | None |
+| Image, video, speech and transcription tools | `belive-aihub-media` | None; needs the plugins |
+| Setup | `hermes model` → BeLive AI Hub | Config edit as above |
+
+To move to the plugin later, keep the key name, set `model.provider: belive-aihub`, and remove the `providers.belive` block and the `custom` fallback entries in the same change.
+
 ## Models and billing
 
 The plugin discovers models from `https://tokenhub-api.belive.sg/api/v1/models` and lists entries whose catalog explicitly advertises ready Chat Completions with tools and text output. It preserves the gateway's exact `author/slug` IDs. Non-chat models are excluded. If discovery fails, Hermes uses the small curated model list; that list is not a guarantee that every account may access every model. A successful empty response remains an empty list.
