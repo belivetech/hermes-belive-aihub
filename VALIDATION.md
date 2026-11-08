@@ -147,8 +147,9 @@ The script has two checks (2026-11-08):
 | EOF without `[DONE]` | 1 request | 4 | Fail |
 | Half a tool call | 1 request, tool not run | 4, not run | Fail on requests |
 | Completed tool, then a broken stream | 2 requests, tool run once | 5, run once | Fail on requests; the tool-run criterion **passes** in this fixture |
+| Completed tool, then an error frame, `auto_recovery_cycles: 1` | 2 requests, tool run once | 4, run once | Fail on requests; the tool-run criterion **passes** |
 
-The tool-run result covers one fixture: a tool that completed before the stream broke, with no auto-recovery. A completed tool followed by an error frame with auto-recovery on is not covered.
+The tool-run result covers two fixtures (2026-11-08): a tool that completed before an EOF with no auto-recovery, and a tool that completed before an error frame with one auto-recovery cycle. In the second, Hermes sent the tool call, the stream that broke, a non-streaming probe, and one recovery resend about 16 s later. Every request after the tool call carried the tool result, so the tool did not run again. Neither fixture covers a tool call that breaks before it completes, which `tool_eof` covers with the tool not run.
 
 `auto_recovery_cycles: 0` is a **partial mitigation**. It stops the minutes-long resend loop, but an error frame still sends 2 requests and an EOF 4. Closing this needs a Hermes change: a setting for the continuation layer, and an "incomplete" label on joined partial text.
 
