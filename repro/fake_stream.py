@@ -3,7 +3,8 @@
 MODE: ok | error_frame (text, then an `error` frame, no [DONE]) | eof (text, then close, no
 [DONE]) | tool_eof (half a tool call, then close) | tool_done_eof (first a complete `terminal` tool
 call that appends a line to $TOOL_COUNTER, then, once a tool result is in the conversation, text
-and a close without [DONE]). Every POST appends one JSON line to LOG.
+and a close without [DONE]) | tool_done_error (the same tool call, then text and an `error` frame). Every POST
+appends one JSON line to LOG.
 Usage: python3 fake_stream.py MODE LOG PORT"""
 import json, os, sys, time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -42,7 +43,7 @@ class H(BaseHTTPRequestHandler):
         w = lambda s: (self.wfile.write(s.encode()), self.wfile.flush())
         if MODE == "ok":
             w(chunk({"role": "assistant", "content": "ok"})); w(chunk({}, "stop")); w("data: [DONE]\n\n"); return
-        if MODE == "tool_done_eof" and not tool_results:
+        if MODE in ("tool_done_eof", "tool_done_error") and not tool_results:
             args = json.dumps({"command": "echo ran >> " + os.environ["TOOL_COUNTER"]})
             w(chunk({"role": "assistant", "tool_calls": [{"index": 0, "id": "call_1", "type": "function",
                 "function": {"name": "terminal", "arguments": args}}]}))
@@ -52,7 +53,7 @@ class H(BaseHTTPRequestHandler):
                 "function": {"name": "terminal", "arguments": "{\"command\": \"echo hi"}}]}))
         else:
             w(chunk({"role": "assistant", "content": "Partial answer"}))
-        if MODE == "error_frame":
+        if MODE in ("error_frame", "tool_done_error"):
             w("data: " + json.dumps({"error": {"message": "upstream stream failed", "code": 502}}) + "\n\n")
         # eof / tool_eof / error_frame: close without [DONE]
         self.close_connection = True
