@@ -30,7 +30,7 @@ Auxiliary requests resolve the same active profile's key. Do not add `api_key` o
 
 ## Without the plugin
 
-Hermes older than 0.22.7, or a host where you do not want a plugin, can call BeLive AI Hub as a custom OpenAI-compatible provider. This is the recipe in the public [Hermes Agent guide](https://aihub.belive.sg/docs/hermes-agent), which also covers media settings. It was run against production on Hermes 0.22.5 on 2026-11-09 (chat and `vision_analyze`).
+Hermes older than 0.22.7, or a host where you do not want a plugin, can call BeLive AI Hub as a custom OpenAI-compatible provider. It is compatible with the custom-provider recipe in the public [Hermes Agent guide](https://aihub.belive.sg/docs/hermes-agent): same provider name, key name and vision settings. The guide's example uses GLM with a DeepSeek fallback instead of Qwen with GLM, and covers media settings. It was run against production on Hermes 0.22.5 on 2026-11-09 (chat and `vision_analyze`).
 
 Put the key in the profile's private `.env` as `BELIVE_TOKENHUB_API_KEY=sk-tokenhub-…`. Do not use `TOKENHUB_API_KEY`: Hermes's Tencent provider reads that name. Then merge into `config.yaml`:
 
