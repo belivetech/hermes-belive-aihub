@@ -30,46 +30,45 @@ Auxiliary requests resolve the same active profile's key. Do not add `api_key` o
 
 ## Without the plugin
 
-Hermes older than 0.22.7, or a host where you do not want a plugin, can call BeLive AI Hub as a custom OpenAI-compatible provider. Hermes reads this shape from 0.18.0 through 0.23.0. It was run against production on Hermes 0.22.5 on 2026-11-09 (`qwen/qwen3.8-flash` main, `google/gemini-3.8-flash` with `-m`).
+Hermes older than 0.22.7, or a host where you do not want a plugin, can call BeLive AI Hub as a custom OpenAI-compatible provider. This is the recipe in the public [Hermes Agent guide](https://aihub.belive.sg/docs/hermes-agent), which also covers media settings. It was run against production on Hermes 0.22.5 on 2026-11-09 (chat and `vision_analyze`).
 
 Put the key in the profile's private `.env` as `BELIVE_TOKENHUB_API_KEY=sk-tokenhub-…`. Do not use `TOKENHUB_API_KEY`: Hermes's Tencent provider reads that name. Then merge into `config.yaml`:
 
 ```yaml
 providers:
-  belive:                      # not "belive-aihub", which is the plugin's provider name
-    base_url: https://tokenhub-api.belive.sg/api/v1
+  tokenhub:
+    api: https://tokenhub-api.belive.sg/api/v1
     key_env: BELIVE_TOKENHUB_API_KEY
     transport: chat_completions
-    default_model: qwen/qwen3.8-flash
 model:
-  provider: custom:belive
+  provider: custom:tokenhub
   default: qwen/qwen3.8-flash
 fallback_providers:
-  - provider: custom
+  - provider: custom:tokenhub
     model: z-ai/glm-5.3-flash
-    base_url: https://tokenhub-api.belive.sg/api/v1
-    key_env: BELIVE_TOKENHUB_API_KEY
+tools:
+  tool_search: false
 auxiliary:
-  vision:      { provider: main, model: google/gemini-3.8-flash }
-  compression: { provider: main, model: qwen/qwen3.8-flash }
-agent:
-  reasoning_effort: low
+  vision:
+    base_url: https://tokenhub-api.belive.sg/api/v1
+    api_key: ${BELIVE_TOKENHUB_API_KEY}
+    model: qwen/qwen3.8-flash
 ```
 
-`base_url` is needed on the named provider and on each `fallback_providers` entry. Auxiliary blocks use `provider: main`, which reuses the main provider's address and key. `agent.reasoning_effort` is sent as a top-level `reasoning_effort` from Hermes 0.19.0; from 0.21.4 Hermes sends `medium` when it is unset.
+Keep `custom:tokenhub` exactly as shown. The vision block needs its own `base_url` and an `api_key` reference: `key_env` does not resolve there. `agent.reasoning_effort` is sent as a top-level `reasoning_effort` from Hermes 0.19.0; from 0.21.4 Hermes sends `medium` when it is unset.
 
 What you do not get without the plugin:
 
 | Feature | Plugin | Custom provider |
 |---|---|---|
-| Chat, tools, fallback, vision, compression | Yes | Yes |
+| Chat, tools, fallback, vision | Yes | Yes |
 | Model list | Ready chat-with-tools models from the live catalogue | Every catalogue entry, media models included |
 | `provider_routing` sent as AI Hub's `provider` object | Yes | No |
 | Discovery address guard | Production and staging AI Hub only | None |
-| Image, video, speech and transcription tools | `belive-aihub-media` | None; needs the plugins |
+| Image, video, speech and transcription | `belive-aihub-media` | Image and video generation and speech through per-feature settings in the guide; no speech to text |
 | Setup | `hermes model` → BeLive AI Hub | Config edit as above |
 
-To move to the plugin later, keep the key name, set `model.provider: belive-aihub`, and remove the `providers.belive` block and the `custom` fallback entries in the same change.
+To move to the plugin later, keep the key name, set `model.provider: belive-aihub`, and remove the `providers.tokenhub` block, the `custom:tokenhub` fallback entries and the vision block's `base_url` and `api_key` in the same change.
 
 ## Models and billing
 
